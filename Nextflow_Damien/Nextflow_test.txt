@@ -54,7 +54,7 @@ process featurescount {
 }
 
 workflow {
-    reads_ch = Channel.fromPath('Test.fastq.gz')  // All FASTQ files in folder
+    reads_ch = Channel.fromPath('Test_head.fastq.zip')
     fasta_ch = Channel.fromPath('reference_genome_Staphylococcus_aureus.fasta')
     gtf_ch   = Channel.fromPath('reference_genome_S_aureus.gtf')
 
@@ -64,3 +64,4 @@ workflow {
     sam_ch = bowtie(trimmed_ch, index_ch)
     featurescount(sam_ch, gtf_ch)
 }
+
