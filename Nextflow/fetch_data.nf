@@ -1,6 +1,8 @@
 nextflow.enable.dsl=2
 
 process fetch_data {
+    container 'nf-sratoolkit'
+
     tag {accession}
     publishDir "data", mode: 'copy'
 
