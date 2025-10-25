@@ -1,0 +1,6 @@
+FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y wget tar && \
+    wget https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz && \
+    tar -xzf sratoolkit.current-ubuntu64.tar.gz -C /usr/local/bin && \
+    rm -f sratoolkit.current-ubuntu64.tar.gz
+ENV PATH="/usr/local/bin/sratoolkit.3.2.1-ubuntu64/bin:${PATH}"

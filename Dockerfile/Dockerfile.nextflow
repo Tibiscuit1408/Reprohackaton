@@ -1,0 +1,4 @@
+FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y wget openjdk-17-jdk && rm -rf /var/lib/apt/lists/*
+RUN wget -qO /usr/local/bin/nextflow https://get.nextflow.io && chmod +x /usr/local/bin/nextflow
+CMD ["nextflow"]
