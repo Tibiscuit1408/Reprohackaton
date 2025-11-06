@@ -71,6 +71,41 @@ pheatmap(vst_mat_scaled,
          clustering_distance_rows = "correlation",
          clustering_distance_cols = "correlation",
          clustering_method = "ward.D2",
-         main = NULL)
+         main = "Heatmap")
+
+## Vulcano plot
+# Volcano plot variables (from the DESeq analysis)
+log_fc <- res$log2FoldChange       # log fold change
+pval <- res$padj                   # adjusted p-value
+
+# Optionally, remove NAs
+valid_idx <- !is.na(log_fc) & !is.na(pval)
+log_fc <- log_fc[valid_idx]
+pval <- pval[valid_idx]
+
+# Significance thresholds
+seuil <- 0.1           # adjusted p-value threshold
+logfc_cutoff <- 1      # log2 fold change threshold
+
+# Basic volcano plot
+plot(log_fc, -log10(pval),
+     pch = 16,
+     xlab = "log2 Fold Change",
+     ylab = "-log10 Adjusted p-value",
+     main = "Volcano Plot",
+     col = "lightgray")
+
+# Add effect annotation
+mtext("Effect: condition")
+
+# Add significance lines
+abline(h = -log10(seuil), v = c(-logfc_cutoff, logfc_cutoff),
+       lwd = 2, col = "orange")
+
+# Highlight significant DEGs
+sig_idx <- which(pval < seuil & abs(log_fc) > logfc_cutoff)
+points(log_fc[sig_idx], -log10(pval[sig_idx]), pch = 16)
+# Optional grid
+grid()
 
 
