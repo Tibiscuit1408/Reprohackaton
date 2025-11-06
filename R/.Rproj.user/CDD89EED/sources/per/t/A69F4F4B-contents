@@ -1,0 +1,136 @@
+## SOMMAIRE
+
+#   I.   DATA importation
+#   IIa. CAH  classification des gènes et ds individus et heatmap
+#   IIb. CAH  classification des gènes et des individus avec complexHeatmap 
+
+
+
+setwd("C:/Users/eh263/OneDrive/Documents/Emilie/2024-2025/Rennes/S8/Statistiques/Analyse_Don_genomique/Results")
+#dir("0_data")
+
+#---------------------------------------
+#   I. IMPORTATION des DATA : sondes exprimees
+#---------------------------------------
+
+#### importation
+data <- read.delim2("foiePositive.txt" ,sep=" ",header=T, dec="." )
+
+#-------------------------------------------------------------------------------
+# IIa. Classification des sondes et individus et visualisation par un heatmap
+#-------------------------------------------------------------------------------
+
+#### preparation des objets
+dim(data)
+data = data-rowMeans(data)
+#head(rowMeans(data))
+
+#### Chargement de librairies
+#source("http://bioconductor.org/biocLite.R")
+#biocLite("limma")
+library(limma) # necessaire pour la fonction "heatmap"
+library(marray) # necessaire pour la fonction "maPalette"
+#library(cluster)  ; library(geneplotter)
+#library(marray) # necessaire pour le fonction "maPalette"
+
+
+#### double classification des gènes et des individus et visualisation sous forme dun heatmap
+heatmap(as.matrix(data),
+            distfun=function(data){as.dist(1-cor(t(data)))},			
+            # définition de la distance utilisée "1-r"
+            hclustfun=function(distfun) hclust(distfun,method="ward.D2"),	
+            # définition du critere d aggregation ("ward.D2")
+            col= maPalette(low="green",high="red",mid="black"),			
+            # choix des couleurs pour le heatmap
+            labRow= rownames(data),							# labels des lignes du heatmap
+            labCol=colnames(data),							# labels des colonnes du heatmap
+            keep.dendro=TRUE)										# visualisation des dendrogrammes
+
+#### dendrogramme des gènes  
+## Reproduire l'objet de clustering (hclust) utilisé dans la heatmap.
+hc<-hclust(as.dist(1-cor(t(data))),method="ward.D2")
+## visualisation du dendrogramme et determination dy nombre de classes de gènes à retenir
+plot(hc,hang=-1,labels=rownames(data),cex = 0.5)  # pvisualiser
+abline(h=5, col="red")
+# Coupure de l'arbre avec cutree() pour attribuer chaque gène à un cluster (une classe).
+geneCluster <- cutree(hc,k=4)
+head(geneCluster)
+# visualisation du nb de genes par classes
+table(geneCluster)
+#1   2   3   4 
+#110  75  96  51 
+
+
+#-------------------------------------------------------------------------------
+# IIb. Classification avec ComplexHeatmap
+#-------------------------------------------------------------------------------
+
+#source("http://bioconductor.org/biocLite.R")
+#biocLite("ComplexHeatmap")
+#biocLite(c("pathview","circlize"))
+                                     
+library(ComplexHeatmap)
+library(circlize) # for the function "colorRamp2"
+                                    
+
+
+#####  annotation des colonnes
+
+cond1<-substring(colnames(data),9,10) 
+dim(cond1)
+df= data.frame(lignee = cond1)
+
+
+ha1_labelcol = HeatmapAnnotation(
+  df = df,
+  col = list(lignee =  c("Rp" ="forestgreen", "Rm" ="paleturquoise3"),
+             annotation_height =  unit (c(0.5, 0.2,0.2), "cm") )
+)            				
+draw(ha1_labelcol, 1:ncol(data))      
+
+h <-Heatmap(as.matrix(data),
+            col = colorRamp2(c(-1, 0, 1),c("springgreen3", "black", "violetred4")), # for colors of heatmap
+            name = "expr",  
+            top_annotation = ha1_labelcol, #top_annotation_height = unit(3, "cm") ,
+            show_heatmap_legend=T, 						# for printing the heatmap legend
+            clustering_distance_rows = "pearson",
+            clustering_method_rows = "ward.D2",
+            clustering_distance_columns = "pearson",
+            clustering_method_columns = "ward.D2",
+            #split = pathways[rownames(data)],
+            row_title_gp = gpar(fontsize = 8, fontface="bold"),
+            row_names_gp = gpar(fontsize = 1, fontface="bold"),
+            column_names_gp= gpar(fontsize = 6,fontface="bold")
+)
+
+
+ht <- draw(h)
+gene_order <- row_order(ht)
+ordered_gene_names <- rownames(data)[gene_order]
+gene_dendrogram <- row_dend(ht)
+hclust_obj <- as.hclust(gene_dendrogram)
+clusters <- cutree(hclust_obj, k = 2)
+
+# Affichage des clusters
+print(clusters)
+df <- data.frame(clusters)
+
+# Si clusters est un vecteur nommé (nom = gène, valeur = cluster)
+genes_cluster1 <- names(clusters[clusters == 1])
+df_1 <- data.frame(genes_cluster1)
+df_1 <- data.frame(gene = shQuote(genes_cluster1))
+genes_cluster2 <- names(clusters[clusters == 2])
+df_2 <- data.frame(gene = shQuote(genes_cluster2))
+
+
+gene_order <- row_order(ht)
+
+# Voir les noms de gènes dans l'ordre affiché
+ordered_gene_names <- rownames(data)[gene_order]
+print(ordered_gene_names)
+
+
+
+
+
+
