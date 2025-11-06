@@ -94,7 +94,7 @@ process Mapping_replicate {
 
     script:
     """
-    bowtie -x Staphylococus ${trimmed} -S ${trimmed.simpleName}_mapped.sam
+    zcat ${trimmed} | bowtie -S Staphylococus - ${trimmed.simpleName}_mapped.sam
     """
 }
 
@@ -119,7 +119,7 @@ process Count {
 
 workflow {
     accession_ch = Channel
-        .fromPath('accessions.txt')
+        .fromPath('accessions_test.txt')
         .splitText()
         .map { it.trim() }
         .filter { it }
