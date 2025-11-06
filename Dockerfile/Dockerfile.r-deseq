@@ -1,4 +1,27 @@
-FROM bioconductor/bioconductor_docker:RELEASE_3_14
+FROM rocker/r-ver:3.4.1
 
-RUN R -e "BiocManager::install(c('DESeq2','EnrichmentBrowser'), version='3.14', ask=FALSE, update=FALSE)"
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
+    sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
+    sed -i '/stretch-updates/d' /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99disable-check-valid && \
+    apt-get update
+
+RUN apt-get install -y \
+    libcurl4-openssl-dev \
+    libxml2-dev \
+    libssl-dev \
+    libpng-dev \
+    libxt-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN echo "options(repos=c(CRAN='https://cran.r-project.org'))" >> /usr/local/lib/R/etc/Rprofile.site && \
+    R -e "install.packages('BiocManager', repos='https://cran.r-project.org')" && \
+    R -e "BiocManager::install(version='3.5', ask=FALSE)" && \
+    R -e "install.packages(c('locfit','Hmisc','ggplot2'), repos='https://cran.r-project.org')" && \
+    R -e "install.packages('RcppArmadillo', repos='https://cran.r-project.org')" && \
+    R -e "BiocManager::install(c('genefilter','geneplotter'), ask=FALSE, update=FALSE)" && \
+    R -e "BiocManager::install('DESeq2', ask=FALSE, update=FALSE)"
+
 CMD ["R"]

@@ -1,3 +1,17 @@
 FROM ubuntu:22.04
-RUN apt-get update && apt-get install -y subread && rm -rf /var/lib/apt/lists/*
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /opt
+
+# wget and unzip install
+RUN apt-get update && apt-get install -y wget unzip && rm -rf /var/lib/apt/lists/*
+
+# Subread 1.4.6-p3 install
+RUN wget https://sourceforge.net/projects/subread/files/subread-1.4.6-p3/subread-1.4.6-p3-Linux-x86_64.tar.gz && \
+    tar -xvzf subread-1.4.6-p3-Linux-x86_64.tar.gz && \
+    rm subread-1.4.6-p3-Linux-x86_64.tar.gz
+
+ENV PATH="/opt/subread-1.4.6-p3-Linux-x86_64/bin:${PATH}"
+
 CMD ["featureCounts"]
+

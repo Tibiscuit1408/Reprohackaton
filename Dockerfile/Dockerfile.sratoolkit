@@ -1,4 +1,6 @@
 FROM ubuntu:22.04
+
+# SRAToolkit install
 RUN apt-get update && apt-get install -y wget tar && \
     wget https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz && \
     tar -xzf sratoolkit.current-ubuntu64.tar.gz -C /usr/local/bin && \
