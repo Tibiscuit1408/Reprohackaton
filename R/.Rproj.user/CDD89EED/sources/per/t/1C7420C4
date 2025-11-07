@@ -1,0 +1,28 @@
+{
+    "id": "1C7420C4",
+    "path": null,
+    "project_path": null,
+    "type": "object_explorer",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1762357642298.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "id": "92639161275446c987a8e52c5a23961f",
+        "name": "dds",
+        "title": "dds",
+        "language": "R",
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 8389772277101255968,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1762357642298,
+    "read_only": false,
+    "read_only_alternatives": []
+}
