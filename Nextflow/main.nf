@@ -119,7 +119,7 @@ process Count {
 
 workflow {
     accession_ch = Channel
-        .fromPath('accessions_test.txt')
+        .fromPath('accessions.txt')
         .splitText()
         .map { it.trim() }
     reads_ch = fetch_data(accession_ch)
