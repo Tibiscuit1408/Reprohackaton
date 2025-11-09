@@ -128,18 +128,16 @@ RUN R -e "install.packages('DelayedArray', repos='https://bioconductor.org/packa
 RUN R -e "install.packages('SummarizedExperiment', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
 RUN R -e "install.packages('BiocParallel', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
 
+# pheatmap install
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/gtools/gtools_3.5.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/pheatmap/pheatmap_1.0.8.tar.gz', repos=NULL, type='source')"
+
 # DESeq2 
 RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/RcppArmadillo/RcppArmadillo_0.7.800.2.0.tar.gz', repos=NULL, type='source')"
 RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/locfit/locfit_1.5-9.1.tar.gz', repos=NULL, type='source')"
 
 RUN R -e "install.packages('DESeq2', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
 
-# pheatmap install
-RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/gtools/gtools_3.5.0.tar.gz', repos=NULL, type='source')"
-RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/pheatmap/pheatmap_1.0.8.tar.gz', repos=NULL, type='source')"
-
-
-# Lancer R en interactif
 CMD ["R"]
 
 
