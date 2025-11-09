@@ -122,7 +122,6 @@ workflow {
         .fromPath('accessions_test.txt')
         .splitText()
         .map { it.trim() }
-        .filter { it }
     reads_ch = fetch_data(accession_ch)
 
     (fasta_ch, gtf_ch) = get_genomic_data()
