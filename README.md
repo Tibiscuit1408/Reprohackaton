@@ -12,7 +12,7 @@ Toutes les images sont hébergées sur le dépôt Docker Hub suivant :
 | [`nf-sratoolkit`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-sratoolkit) | `tibiscuit14/reprohackaton2025:nf-sratoolkit` |
 | [`gffread-ncbi`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=gffread-ncbi) | `tibiscuit14/reprohackaton2025:gffread-ncbi` |
 | [`nf-r-deseq`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-r-deseq) | `tibiscuit14/reprohackaton2025:nf-r-deseq` |
-| [`nf-r-enrichmentbrowser`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-r-enrichmentbrowser) | `tibiscuit14/reprohackaton2025:nf-r-enrichmentbrowser` |
+| [`nf-enrichmentbrowser`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-enrichmentbrowser) | `tibiscuit14/reprohackaton2025:nf-enrichmentbrowser` |
 
 ## OPTIONNAL - Etape 0 : Création des images dockers
 Si vous souhaitez créer les images dockers sur votre ordinateur, voici les commandes nécessaires. Il faudra cependant changer les configurations du nextflo>
