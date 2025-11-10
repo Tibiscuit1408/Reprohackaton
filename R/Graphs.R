@@ -128,17 +128,22 @@ grid()
 ### Difference between original data and reproduced data ###
 ############################################################
 
-original <- read.table("GSE139659.csv", sep=';', header=TRUE)
-
+original <- read.table("GSE139659.tsv", sep='\t', header=TRUE)
 ## Rows and columns reorganisation
 
 #set gene_id as name of the rows
 rownames(original) <- original[,2]
 
+# Remove possible non-numeric columns
+original <- original[, sapply(original, is.numeric)]
+
+original_filtered <- original[apply(original, 1, var, na.rm=TRUE) != 0, ]
+original_filtered <- na.omit(original_filtered)
+
 #plot heatmap
 
 #select columns of interest
-data <- original[,c(6:11)]
+data <- original_filtered[,c(2:7)]
 
 #reorganisation of rows based on ASC geneid
 data <- data[order(rownames(data)), ]
@@ -150,27 +155,6 @@ colnames(data)[colnames(data) == "ctrl6"] <- "Ctrl3"
 
 #difference of length
 #difference of genes selected and not selected
-
-
-
-#Heatmap
-### Plot the heatmap ###
-annotation_col <- data.frame(Condition = factor(colData$condition)) #aggregation of the controls and persisters (names of the )
-rownames(annotation_col) <- rownames(colData)
-my_colors <- colorRampPalette(c("deepskyblue4", "azure", "darkorange2"))(255)
-ann_colors <- list(Condition = c(control = "black", persister = "grey"))
-pheatmap(vst_mat_scaled,
-         annotation_col = annotation_col,
-         show_rownames = FALSE,
-         show_colnames = FALSE,
-         color = my_colors,
-         annotation_colors = ann_colors,
-         clustering_distance_rows = "correlation",
-         clustering_distance_cols = "correlation",
-         clustering_method = "ward.D2",
-         main = "Heatmap")
-
-
 
 #plot of the regression -> amongst genes that are common in both datasets
 ## Global overview
@@ -246,4 +230,3 @@ ggplot(df_long, aes(x = Original, y = Reproduced, color = Condition)) +
     y = "Reproduced Data"
   ) +
   theme_minimal()
-
