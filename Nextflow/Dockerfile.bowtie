@@ -1,0 +1,19 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies for Bowtie and SAMtools
+RUN apt-get update && \
+    apt-get install -y wget unzip xz-utils samtools && \
+    rm -rf /var/lib/apt/lists/*
+
+# Bowtie 0.12.7 install
+RUN wget https://sourceforge.net/projects/bowtie-bio/files/bowtie/0.12.7/bowtie-0.12.7-linux-x86_64.zip && \
+    unzip bowtie-0.12.7-linux-x86_64.zip -d /opt && \
+    rm bowtie-0.12.7-linux-x86_64.zip
+
+# Add Bowtie to PATH
+ENV PATH="/opt/bowtie-0.12.7:${PATH}"
+
+# Default command
+CMD ["bowtie"]
