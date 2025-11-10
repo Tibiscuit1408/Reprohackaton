@@ -1,10 +1,21 @@
 ### Load required libraries
+
+#Stat analysis (plots // article)
 library(DESeq2)
 library(pheatmap)
 library(RColorBrewer)
 
-### Import raw counts
-#counts <- read.table("GSE139659.csv", header=TRUE, sep=";")
+#Further analysis (for the report)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+
+############################
+### Statistical Analysis ###
+############################
+
+
+### Import raw counts (reproduced data)
 counts <- read.table("all_samples_gene_counts.txt",header = TRUE,sep = "\t",comment.char = "#")
 
 #Rename the columns of the data
@@ -15,11 +26,15 @@ colnames(counts)[colnames(counts) == "SRR10379724_1_trimmed_mapped.sam"] <- "Ctr
 colnames(counts)[colnames(counts) == "SRR10379725_1_trimmed_mapped.sam"] <- "Ctrl2"
 colnames(counts)[colnames(counts) == "SRR10379721_1_trimmed_mapped.sam"] <- "IP1"
 
+#remove "gene-" of the gene_id so that it matches original data
+counts$Geneid <- sub("^gene-", "", counts$Geneid)
+
 #Set gene_id as the name of the rows
 rownames(counts) <- counts[,1]
+
 counts <- counts[,-1]
 
-# Remove possible non-numeric columns (safety)
+# Remove possible non-numeric columns
 counts <- counts[, sapply(counts, is.numeric)]
 
 counts_filtered <- counts[apply(counts, 1, var, na.rm=TRUE) != 0, ]
@@ -57,8 +72,8 @@ vst_mat <- assay(vsd)[rownames(vsd) %in% rownames(DEGs), ]
 ### Center and scale per gene (optional but recommended)
 vst_mat_scaled <- t(scale(t(vst_mat)))
 
-### Plot the heatmap
-annotation_col <- data.frame(Condition = factor(colData$condition)) #aggreagation of the controls and persisters (names of the )
+### Plot the heatmap ###
+annotation_col <- data.frame(Condition = factor(colData$condition)) #aggregation of the controls and persisters (names of the )
 rownames(annotation_col) <- rownames(colData)
 my_colors <- colorRampPalette(c("deepskyblue4", "azure", "darkorange2"))(255)
 ann_colors <- list(Condition = c(control = "black", persister = "grey"))
@@ -73,7 +88,8 @@ pheatmap(vst_mat_scaled,
          clustering_method = "ward.D2",
          main = "Heatmap")
 
-## Vulcano plot
+
+### Vulcano plot ###
 # Volcano plot variables (from the DESeq analysis)
 log_fc <- res$log2FoldChange       # log fold change
 pval <- res$padj                   # adjusted p-value
@@ -108,4 +124,126 @@ points(log_fc[sig_idx], -log10(pval[sig_idx]), pch = 16)
 # Optional grid
 grid()
 
+############################################################
+### Difference between original data and reproduced data ###
+############################################################
+
+original <- read.table("GSE139659.csv", sep=';', header=TRUE)
+
+## Rows and columns reorganisation
+
+#set gene_id as name of the rows
+rownames(original) <- original[,2]
+
+#plot heatmap
+
+#select columns of interest
+data <- original[,c(6:11)]
+
+#reorganisation of rows based on ASC geneid
+data <- data[order(rownames(data)), ]
+
+#rename the columns
+colnames(data)[colnames(data) == "ctrl4"] <- "Ctrl1"
+colnames(data)[colnames(data) == "ctrl5"] <- "Ctrl2"
+colnames(data)[colnames(data) == "ctrl6"] <- "Ctrl3"
+
+#difference of length
+#difference of genes selected and not selected
+
+
+
+#Heatmap
+### Plot the heatmap ###
+annotation_col <- data.frame(Condition = factor(colData$condition)) #aggregation of the controls and persisters (names of the )
+rownames(annotation_col) <- rownames(colData)
+my_colors <- colorRampPalette(c("deepskyblue4", "azure", "darkorange2"))(255)
+ann_colors <- list(Condition = c(control = "black", persister = "grey"))
+pheatmap(vst_mat_scaled,
+         annotation_col = annotation_col,
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         color = my_colors,
+         annotation_colors = ann_colors,
+         clustering_distance_rows = "correlation",
+         clustering_distance_cols = "correlation",
+         clustering_method = "ward.D2",
+         main = "Heatmap")
+
+
+
+#plot of the regression -> amongst genes that are common in both datasets
+## Global overview
+df_merged <- merge(data, sample_data, by = "row.names")
+
+# Identify columns by suffix
+original_cols <- grep("\\.x$", names(df_merged), value = TRUE)
+reproduced_cols <- gsub("\\.x$", ".y", original_cols)  # replace .x with .y to find matching names
+
+#Combining columns original/repruced based on accurate column name
+df_long <- do.call(rbind, lapply(seq_along(original_cols), function(i) {
+  data.frame(
+    Condition = gsub("\\.x$", "", original_cols[i]),
+    Original = df_merged[[original_cols[i]]],
+    Reproduced = df_merged[[reproduced_cols[i]]]
+  )
+}))
+
+#Calculating the global MSE
+df_long$SquaredError <- (df_long$Original - df_long$Reproduced)^2
+MSE <- mean(df_long$SquaredError, na.rm = TRUE)
+RMSE <- sqrt(MSE)
+
+###normalised RMSE
+nRMSE <- RMSE / mean(df_long$Original, na.rm = TRUE)
+#nRMSE
+
+nRMSE_per_condition <- df_long %>%
+  group_by(Condition) %>%
+  summarise(
+    MSE = mean((Original - Reproduced)^2, na.rm = TRUE),
+    RMSE = sqrt(MSE),
+    Mean_Original = mean(Original, na.rm = TRUE),
+    nRMSE = RMSE / Mean_Original
+  )
+
+#nRMSE_per_condition
+
+### Statistics (how statistically different each pair is from each other)
+p_values <- df_long %>%
+  group_by(Condition) %>%
+  summarise(
+    p_value = t.test(Original, Reproduced, paired = TRUE)$p.value
+  )
+
+#p_values
+
+
+### Regression (plot)
+ggplot(df_long, aes(x = Original, y = Reproduced, color = Condition)) +
+  geom_point(size = 2, alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_abline(slope = 1, intercept = 0, color = "darkgreen", linetype = "dashed") +
+  geom_text(
+    data = nRMSE_per_condition,
+    aes(x = Inf, y = Inf, label = paste("nRMSE =", round(nRMSE*100, 3),"%")),
+    inherit.aes = FALSE,
+    hjust = 2, vjust = 1.1,
+    size = 3
+  ) +
+  geom_text(
+    data = p_values,
+    aes(x = Inf, y = Inf, label = paste("pvalue =",round(p_value,3))),
+    inherit.aes = FALSE,
+    hjust = 2.5, vjust = 3,
+    size = 3
+  ) +
+  facet_wrap(~ Condition) +
+  labs(
+    title = "Regression Between Original and Reproduced Data",
+    subtitle = "Green = perfect reproducibility (y = x)",
+    x = "Original Data",
+    y = "Reproduced Data"
+  ) +
+  theme_minimal()
 
