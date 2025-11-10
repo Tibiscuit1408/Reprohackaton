@@ -80,7 +80,7 @@ process Mapping_refgenome {
     """
 }
 
-// 5. Map reads to reference
+// 5. Mapping reads and generating sorted BAM
 process Mapping_replicate {
 
     publishDir path: "${params.outdir}", mode: 'copy'
@@ -90,21 +90,26 @@ process Mapping_replicate {
     path index_files
 
     output:
-    path "${trimmed.simpleName}_mapped.sam"
+    path "${trimmed.simpleName}_mapped.bam"
 
     script:
     """
-    zcat ${trimmed} | bowtie -S Staphylococus - ${trimmed.simpleName}_mapped.sam
+    # Map reads with Bowtie, convert SAM to BAM, and sort in one go
+    zcat ${trimmed} | \
+    bowtie -S Staphylococus - | \
+    samtools view -bS - | \
+    samtools sort -o ${trimmed.simpleName}_mapped.bam
     """
 }
 
-// 6. Count reads per gene
+
+// 6. Count reads per gene using sorted BAM files
 process Count {
 
     publishDir path: "${params.outdir}", mode: 'copy'
 
     input:
-    path sams
+    path bams
     path gtf
 
     output:
@@ -112,17 +117,17 @@ process Count {
 
     script:
     """
-    featureCounts -a ${gtf} -o all_samples_gene_counts.txt -g transcript_id -t CDS -s 1 ${sams.join(' ')}
+    featureCounts -a ${gtf} -o all_samples_gene_counts.txt -g transcript_id -t CDS -s 1 ${bams.join(' ')}
     """
 }
 
 
+
 workflow {
     accession_ch = Channel
-        .fromPath('accessions_test.txt')
+        .fromPath('accessions.txt')
         .splitText()
         .map { it.trim() }
-        .filter { it }
     reads_ch = fetch_data(accession_ch)
 
     (fasta_ch, gtf_ch) = get_genomic_data()
@@ -131,7 +136,7 @@ workflow {
     trimmed_ch = Trimming(reads_ch)
     index_ch   = Mapping_refgenome(fasta_ch)
 
-    sam_ch = Mapping_replicate(trimmed_ch, index_ch)
-    sam_list_ch = sam_ch.collect()
-    Count(sam_list_ch, gtf_ch)
+    bam_ch = Mapping_replicate(trimmed_ch, index_ch)
+    bam_list_ch = bam_ch.collect()
+    Count(bam_list_ch, gtf_ch)
 }

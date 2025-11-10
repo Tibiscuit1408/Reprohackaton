@@ -1,27 +1,143 @@
 FROM rocker/r-ver:3.4.1
 
-ENV DEBIAN_FRONTEND=noninteractive
+RUN sed -i '/stretch-updates/d' /etc/apt/sources.list && \
+    sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
-RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
-    sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
-    sed -i '/stretch-updates/d' /etc/apt/sources.list && \
-    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99disable-check-valid && \
-    apt-get update
-
-RUN apt-get install -y \
+# Basic system dependencies
+RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     libxml2-dev \
     libssl-dev \
-    libpng-dev \
     libxt-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libglib2.0-dev \
+    libx11-dev \
+    libreadline-dev \
+    libncurses5-dev \
+    libbz2-dev \
+    liblzma-dev \
+    libpcre2-dev \
+    gfortran \
+    build-essential \
+    ca-certificates \
+    wget \
+    git \
+    curl 
 
-RUN echo "options(repos=c(CRAN='https://cran.r-project.org'))" >> /usr/local/lib/R/etc/Rprofile.site && \
-    R -e "install.packages('BiocManager', repos='https://cran.r-project.org')" && \
-    R -e "BiocManager::install(version='3.5', ask=FALSE)" && \
-    R -e "install.packages(c('locfit','Hmisc','ggplot2'), repos='https://cran.r-project.org')" && \
-    R -e "install.packages('RcppArmadillo', repos='https://cran.r-project.org')" && \
-    R -e "BiocManager::install(c('genefilter','geneplotter'), ask=FALSE, update=FALSE)" && \
-    R -e "BiocManager::install('DESeq2', ask=FALSE, update=FALSE)"
+# BiocInstaller install
+RUN wget https://bioconductor.org/packages/3.5/bioc/src/contrib/BiocInstaller_1.26.1.tar.gz && \
+    R CMD INSTALL BiocInstaller_1.26.1.tar.gz
+
+# Necessary packages
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/curl/curl_2.8.1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/RColorBrewer/RColorBrewer_1.1-2.tar.gz', repos=NULL, type='source')"
+
+# Bioconductor core dependencies
+RUN wget https://bioconductor.org/packages/3.5/bioc/src/contrib/BiocGenerics_0.22.1.tar.gz && R CMD INSTALL BiocGenerics_0.22.1.tar.gz
+RUN R -e "install.packages('S4Vectors', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+RUN wget https://bioconductor.org/packages/3.5/bioc/src/contrib/IRanges_2.10.5.tar.gz && R CMD INSTALL IRanges_2.10.5.tar.gz
+RUN wget https://bioconductor.org/packages/3.5/bioc/src/contrib/Biobase_2.36.2.tar.gz && R CMD INSTALL Biobase_2.36.2.tar.gz
+
+# RSQLite install
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/assertthat/assertthat_0.2.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/digest/digest_0.6.12.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/bit/bit_1.1-12.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/pkgconfig/pkgconfig_2.0.1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/Rcpp/Rcpp_0.12.12.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/BH/BH_1.65.0-1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/plogr/plogr_0.1-1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/prettyunits/prettyunits_1.0.2.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/memoise/memoise_1.1.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/blob/blob_1.1.1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/bit64/bit64_0.9-7.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/DBI/DBI_0.6-1.tar.gz', repos=NULL, type='source')"
+
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/RSQLite/RSQLite_2.0.tar.gz', repos=NULL, type='source')"
+
+# CRAN dependency for AnnotationDbi
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/survival/survival_2.41-3.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/xtable/xtable_1.8-2.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/cluster/cluster_2.0.6.tar.gz', repos=NULL, type='source')"
+
+# RCurl
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/bitops/bitops_1.0-6.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/RCurl/RCurl_1.95-4.8.tar.gz', repos=NULL, type='source')"
+
+# Annotation-related packages
+RUN wget https://bioconductor.org/packages/3.5/bioc/src/contrib/AnnotationDbi_1.38.2.tar.gz && R CMD INSTALL AnnotationDbi_1.38.2.tar.gz
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/XML/XML_3.98-1.9.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('annotate', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+RUN R -e "install.packages('genefilter', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+RUN R -e "install.packages('geneplotter', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+
+# DESeq install (multiple dependencies to install properly)
+# GenomeInfoDb Data
+RUN R -e "install.packages('https://bioconductor.org/packages/3.5/data/annotation/src/contrib/GenomeInfoDbData_0.99.0.tar.gz', repos=NULL, type='source')"
+
+# Basic CRAN dependencies 
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/matrixStats/matrixStats_0.52.2.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('futile.logger', repos='https://cran.r-project.org', type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/snow/snow_0.4-2.tar.gz', repos=NULL, type='source')"
+
+# ggplot2 install
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/colorspace/colorspace_1.3-2.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/munsell/munsell_0.4.3.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/dichromat/dichromat_2.0-0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/labeling/labeling_0.3.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/plyr/plyr_1.8.4.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/scales/scales_0.4.1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/lazyeval/lazyeval_0.2.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/tibble/tibble_1.2.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/gtable/gtable_0.2.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/reshape2/reshape2_1.4.2.tar.gz', repos=NULL, type='source')"
+
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/ggplot2/ggplot2_2.2.1.tar.gz', repos=NULL, type='source')"
+
+# Hmisc install
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/backports/backports_1.0.5.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/checkmate/checkmate_1.8.2.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/htmltools/htmltools_0.3.5.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/jsonlite/jsonlite_1.4.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/shiny/shiny_1.0.3.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/yaml/yaml_2.1.14.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/htmlwidgets/htmlwidgets_0.8.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/evaluate/evaluate_0.10.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/highr/highr_0.6.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/mime/mime_0.5.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/markdown/markdown_0.8.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/knitr/knitr_1.15.1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/htmlTable/htmlTable_1.9.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/Formula/Formula_1.2-1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/latticeExtra/latticeExtra_0.6-28.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/acepack/acepack_1.4.1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/gridExtra/gridExtra_2.2.1.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/viridis/viridis_0.3.4.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('base64enc', repos = 'https://cran.r-project.org', type = 'source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/htmltools/htmltools_0.3.5.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/data.table/data.table_1.10.4.tar.gz', repos=NULL, type='source')"
+
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/Hmisc/Hmisc_4.0-3.tar.gz', repos=NULL, type='source')"
+
+# Bioconductor install
+RUN R -e "install.packages('GenomicRanges', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+RUN R -e "install.packages('DelayedArray', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+RUN R -e "install.packages('SummarizedExperiment', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+RUN R -e "install.packages('BiocParallel', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
+
+# pheatmap install
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/gtools/gtools_3.5.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/pheatmap/pheatmap_1.0.8.tar.gz', repos=NULL, type='source')"
+
+# DESeq2 
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/RcppArmadillo/RcppArmadillo_0.7.800.2.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/locfit/locfit_1.5-9.1.tar.gz', repos=NULL, type='source')"
+
+RUN R -e "install.packages('DESeq2', repos='https://bioconductor.org/packages/3.5/bioc', type='source')"
 
 CMD ["R"]
+
+
