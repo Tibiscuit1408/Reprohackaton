@@ -2,7 +2,7 @@
 Ce projet a été réalisé afin d'être reproductible facilement. Les images des dockers ont été publiées pour faciliter le lancement du code nextflow. 
 
 Toutes les images sont hébergées sur le dépôt Docker Hub suivant :
-[https://hub.docker.com/repositories/tibiscuit14/reprohackaton2025](https://hub.docker.com/repositories/tibiscuit14/reprohackaton2025)
+[https://hub.docker.com/repositories/tibiscuit14/reprohackaton2025](https://hub.docker.com/repository/docker/tibiscuit14/reprohackaton2025/general)
 
 | Image utilisée dans Nextflow | Docker Hub URL |
 |------------------------------|----------------|
