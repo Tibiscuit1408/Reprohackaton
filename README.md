@@ -6,7 +6,7 @@ Toutes les images sont hébergées sur le dépôt Docker Hub suivant :
 
 | Image utilisée dans Nextflow | Docker Hub URL |
 |------------------------------|----------------|
-| [`nf-bowtie`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-bowtie) | `tibiscuit14/reprohackaton2025:nf-bowtie` |
+| [`nf-bowtie-samtools`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-bowtie-samtools) | `tibiscuit14/reprohackaton2025:nf-bowtie-samtools` |
 | [`nf-cutadapt`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-cutadapt) | `tibiscuit14/reprohackaton2025:nf-cutadapt` |
 | [`nf-subread`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-subread) | `tibiscuit14/reprohackaton2025:nf-subread` |
 | [`nf-sratoolkit`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-sratoolkit) | `tibiscuit14/reprohackaton2025:nf-sratoolkit` |
