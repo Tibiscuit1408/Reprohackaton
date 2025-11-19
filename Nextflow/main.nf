@@ -125,7 +125,7 @@ process Count {
 
 workflow {
     accession_ch = Channel
-        .fromPath('accessions.txt')
+        .fromPath('Nextflow/accessions.txt')
         .splitText()
         .map { it.trim() }
     reads_ch = fetch_data(accession_ch)
@@ -140,3 +140,4 @@ workflow {
     bam_list_ch = bam_ch.collect()
     Count(bam_list_ch, gtf_ch)
 }
+

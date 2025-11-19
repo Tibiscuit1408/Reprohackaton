@@ -2,11 +2,11 @@
 Ce projet a été réalisé afin d'être reproductible facilement. Les images des dockers ont été publiées pour faciliter le lancement du code nextflow. 
 
 Toutes les images sont hébergées sur le dépôt Docker Hub suivant :
-[https://hub.docker.com/repositories/tibiscuit14/reprohackaton2025](https://hub.docker.com/repository/docker/tibiscuit14/reprohackaton2025/general)
+[https://hub.docker.com/repositories/tibiscuit14/reprohackaton2025](https://hub.docker.com/repository/docker/tibiscuit14/reprohackaton2025/general](https://hub.docker.com/r/tibiscuit14/reprohackaton2025 )
 
 | Image utilisée dans Nextflow | Docker Hub URL |
 |------------------------------|----------------|
-| [`nf-bowtie`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-bowtie) | `tibiscuit14/reprohackaton2025:nf-bowtie` |
+| [`nf-bowtie-samtools`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-bowtie-samtools) | `tibiscuit14/reprohackaton2025:nf-bowtie-samtools` |
 | [`nf-cutadapt`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-cutadapt) | `tibiscuit14/reprohackaton2025:nf-cutadapt` |
 | [`nf-subread`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-subread) | `tibiscuit14/reprohackaton2025:nf-subread` |
 | [`nf-sratoolkit`](https://hub.docker.com/r/tibiscuit14/reprohackaton2025/tags?name=nf-sratoolkit) | `tibiscuit14/reprohackaton2025:nf-sratoolkit` |
