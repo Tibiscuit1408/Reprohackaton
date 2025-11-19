@@ -26,7 +26,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget \
     git \
-    curl 
+    curl \
+    **procps**
 
 # BiocInstaller install
 RUN wget https://bioconductor.org/packages/3.5/bioc/src/contrib/BiocInstaller_1.26.1.tar.gz && \
