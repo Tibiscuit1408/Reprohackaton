@@ -12,18 +12,16 @@ library(dplyr)
 
 
 ### Import raw counts (reproduced data)
-counts <- read.table("all_samples_gene_counts.txt",header = TRUE,sep = "\t",comment.char = "#")
+counts <- read.table("count_gene.txt",header = TRUE,sep = "\t",comment.char = "#")
 
 #Rename the columns of the data
-colnames(counts)[colnames(counts) == "SRR10379726_1_trimmed_mapped.sam"] <- "Ctrl3"
-colnames(counts)[colnames(counts) == "SRR10379723_1_trimmed_mapped.sam"] <- "IP3"
-colnames(counts)[colnames(counts) == "SRR10379722_1_trimmed_mapped.sam"] <- "IP2"
-colnames(counts)[colnames(counts) == "SRR10379724_1_trimmed_mapped.sam"] <- "Ctrl1"
-colnames(counts)[colnames(counts) == "SRR10379725_1_trimmed_mapped.sam"] <- "Ctrl2"
-colnames(counts)[colnames(counts) == "SRR10379721_1_trimmed_mapped.sam"] <- "IP1"
+colnames(counts)[colnames(counts) == "SRR10379726_1_trimmed_mapped.bam"] <- "Ctrl3"
+colnames(counts)[colnames(counts) == "SRR10379723_1_trimmed_mapped.bam"] <- "IP3"
+colnames(counts)[colnames(counts) == "SRR10379722_1_trimmed_mapped.bam"] <- "IP2"
+colnames(counts)[colnames(counts) == "SRR10379724_1_trimmed_mapped.bam"] <- "Ctrl1"
+colnames(counts)[colnames(counts) == "SRR10379725_1_trimmed_mapped.bam"] <- "Ctrl2"
+colnames(counts)[colnames(counts) == "SRR10379721_1_trimmed_mapped.bam"] <- "IP1"
 
-#remove "gene-" of the gene_id so that it matches original data
-counts$Geneid <- sub("^gene-", "", counts$Geneid)
 
 #Set gene_id as the name of the rows
 rownames(counts) <- counts[,1]
@@ -33,13 +31,12 @@ counts <- counts[,-1]
 # Remove possible non-numeric columns
 counts <- counts[, sapply(counts, is.numeric)]
 
-counts_filtered <- counts[apply(counts, 1, var, na.rm=TRUE) != 0, ]
-counts_filtered <- na.omit(counts_filtered)
+counts_filtered <- na.omit(counts)
 
 
 
 # Sélection des 6 dernières colonnes
-reproduced <- counts[,c(4:ncol(counts_filtered))]
+reproduced <- counts_filtered[,c(4:ncol(counts_filtered))]
 
 ### Define conditions automatically
 colData <- data.frame(
@@ -82,7 +79,7 @@ pheatmap(vst_mat_scaled,
          clustering_distance_rows = "correlation",
          clustering_distance_cols = "correlation",
          clustering_method = "ward.D2",
-         main = "Heatmap")
+         main = "")
 
 
 ### Vulcano plot ###
@@ -104,7 +101,7 @@ plot(log_fc, -log10(pval),
      pch = 16,
      xlab = "log2 Fold Change",
      ylab = "-log10 Adjusted p-value",
-     main = "Volcano Plot",
+     main = "",
      col = "lightgray")
 
 # Add effect annotation
@@ -237,8 +234,6 @@ ggplot(df_long, aes(x = Article, y = Reproduced, color = Condition)) +
   ) +
   facet_wrap(~ Condition) +
   labs(
-    title = "Regression Between Original and Reproduced Data",
-    subtitle = "Green = perfect reproducibility (y = x)",
     x = "Article Data",
     y = "Reproduced Data"
   ) +
@@ -263,7 +258,7 @@ length(rownames(prep_DEGs_article_2))
 length(rownames(DEGs_article))
 #827
 length(rownames(DEGs_reproduced))
-#1144
+#1174
 DEGs_merged <- merge(DEGs_article, DEGs_reproduced, by = "row.names")
 
 #set rownames with gene names
@@ -299,8 +294,6 @@ ggplot(df_ba_2, aes(x = Mean, y = Diff, color = Condition)) +
   geom_hline(yintercept = mean(df_ba_2$Diff), color = "red") +
   theme_minimal() +
   labs(
-    title = "Bland–Altman (MA) Plot: Reproduced vs Original Data",
-    subtitle = "Red = mean bias; Green = perfect agreement (Diff = 0)",
     x = "Mean expression (Article + Reproduced)/2",
     y = "Difference (Reproduced − Article)"
   )
