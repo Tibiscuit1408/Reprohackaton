@@ -25,23 +25,20 @@ process get_genomic_data {
     publishDir "./Genomic_data", mode: 'symlink'
 
     output:
-    path "reference_genome_Staphylococcus_aureus.fasta"
-    path "reference_genome_S_aureus.gtf"
+    tuple path("reference_genome_Staphylococcus_aureus.fasta"),
+          path("reference_genome_S_aureus.gtf")
 
     script:
     """
     # Download the dataset
-    datasets download genome accession GCF_000013425.1 --include genome,gff3 --filename ncbi_dataset.zip
+    datasets download genome accession GCF_000013425.1 --include genome,gtf --filename ncbi_dataset.zip
 
     # Unzip it
     unzip -o ncbi_dataset.zip
 
     # Move FASTA and GFF files to current directory
     mv ncbi_dataset/data/GCF_000013425.1/GCF_000013425.1_ASM1342v1_genomic.fna reference_genome_Staphylococcus_aureus.fasta
-    mv ncbi_dataset/data/GCF_000013425.1/genomic.gff reference_genome_S_aureus.gff
-
-    # Convert GFF to GTF
-    gffread reference_genome_S_aureus.gff -T -o reference_genome_S_aureus.gtf
+    mv ncbi_dataset/data/GCF_000013425.1/genomic.gtf reference_genome_S_aureus.gtf
     """
 }
 
@@ -64,7 +61,7 @@ process Trimming {
 }
 
 // 4. Build Bowtie index
-process Mapping_refgenome {
+process Index_creation {
 
     publishDir path: "${params.outdir}", mode: 'copy'
 
@@ -72,7 +69,7 @@ process Mapping_refgenome {
     path fasta
 
     output:
-    path "Staphylococus.*"
+    path "Staphylococus.*.ebwt"
 
     script:
     """
@@ -117,7 +114,7 @@ process Count {
 
     script:
     """
-    featureCounts -a ${gtf} -o all_samples_gene_counts.txt -g transcript_id -t CDS -s 1 ${bams.join(' ')}
+    featureCounts -a ${gtf} -o all_samples_gene_counts.txt -g gene_id -t gene -s 1 ${bams.join(' ')}
     """
 }
 
@@ -134,10 +131,11 @@ workflow {
     
 
     trimmed_ch = Trimming(reads_ch)
-    index_ch   = Mapping_refgenome(fasta_ch)
+    index_ch   = Index_creation(fasta_ch)
 
     bam_ch = Mapping_replicate(trimmed_ch, index_ch)
     bam_list_ch = bam_ch.collect()
     Count(bam_list_ch, gtf_ch)
 }
+
 
