@@ -25,8 +25,8 @@ process get_genomic_data {
     publishDir "./Genomic_data", mode: 'symlink'
 
     output:
-    tuple path("reference_genome_Staphylococcus_aureus.fasta"),
-          path("reference_genome_S_aureus.gtf")
+    path("reference_genome_Staphylococcus_aureus.fasta")
+    path("reference_genome_S_aureus.gtf")
 
     script:
     """
@@ -137,5 +137,6 @@ workflow {
     bam_list_ch = bam_ch.collect()
     Count(bam_list_ch, gtf_ch)
 }
+
 
 
