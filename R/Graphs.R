@@ -6,6 +6,7 @@ library(reshape2)
 library(dplyr)
 library(tidyverse)
 library(Factoshiny)
+library(ggrepel)
 
 
 #######################################################
@@ -44,6 +45,7 @@ colData <- data.frame(
   condition = ifelse(grepl("^Ctrl", colnames(reproduced)), "control", "persister"),
   row.names = colnames(reproduced)
 )
+
 
 ### Create DESeq2 dataset and run DE analysis
 dds <- DESeqDataSetFromMatrix(countData = reproduced,
@@ -266,11 +268,6 @@ df_long_2 <- do.call(rbind, lapply(seq_along(degs_article_cols), function(i) {
   )
 }))
 
-df_ba_2 <- data.frame(
-  Mean = (df_long_2$Article + df_long_2$Reproduced) / 2,
-  Diff = df_long_2$Reproduced - df_long_2$Article,
-  Condition = df_long_2$Condition
-)
 
 df_ba <- data.frame(
   Mean = (df_long_2$Article + df_long_2$Reproduced) / 2,
@@ -320,7 +317,7 @@ genePositive_article <- original_filtered[,c(2:7)]
 ## Données de l'Article
 x = as.matrix(genePositive_article)
 dta = data.frame(t(x))
-res.PCA<-PCA(dta,graph=TRUE)
+res.PCA<-PCA(dta,graph=FALSE)
 res.HCPC <- HCPC(res.PCA, graph=FALSE)
 #plot.HCPC(res.HCPC,choice='tree',title='Arbre hiérarchique')
 plot.HCPC(res.HCPC,choice='map',draw.tree=FALSE,title='')
@@ -332,12 +329,12 @@ desc_cluster3 = res.HCPC$desc.var$quanti[[3]]
 
 ## Données reproduites
 genePositive_reproduced = counts_filtered[select1,]
-head(genePositive_reproduced)
+#head(genePositive_reproduced)
 genePositive_reproduced <- counts_filtered[,c(4:9)]
 
 x_2 = as.matrix(genePositive_reproduced)
 dta_2 = data.frame(t(x_2))
-res.PCA_2<-PCA(dta_2,graph=TRUE)
+res.PCA_2<-PCA(dta_2,graph=FALSE)
 res.HCPC_2 <- HCPC(res.PCA_2, graph=FALSE)
 #plot.HCPC(res.HCPC_2,choice='tree',title='Arbre hiérarchique')
 plot.HCPC(res.HCPC_2,choice='map',draw.tree=FALSE,title='')
@@ -349,7 +346,7 @@ clusters_2 = res.HCPC_2$data.clust$clust
 
 # Association gènes clusters  (focus on cluster 2 : Perissters)
 desc_cluster2_2 = res.HCPC_2$desc.var$quanti[[2]]
-head(desc_cluster2_2)
+#head(desc_cluster2_2)
 negative_associations_2_2 = rownames(desc_cluster2_2)[desc_cluster2_2[,1]<0]
 positive_associations_2_2 = rownames(desc_cluster2_2)[desc_cluster2_2[,1]>0]
 
