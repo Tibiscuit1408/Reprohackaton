@@ -47,6 +47,7 @@ colData <- data.frame(
   row.names = colnames(reproduced)
 )
 
+colData$condition <- factor(colData$condition)
 
 ### Create DESeq2 dataset and run DE analysis
 dds <- DESeqDataSetFromMatrix(countData = reproduced,
