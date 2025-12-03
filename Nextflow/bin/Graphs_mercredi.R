@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(DESeq2)
 library(pheatmap)
 library(RColorBrewer)
@@ -70,6 +72,7 @@ annotation_col <- data.frame(Condition = factor(colData$condition)) #aggregation
 rownames(annotation_col) <- rownames(colData)
 my_colors <- colorRampPalette(c("deepskyblue4", "azure", "darkorange2"))(255)
 ann_colors <- list(Condition = c(control = "black", persister = "grey"))
+pdf("heatmap_vst_DEGs.pdf", width = 6, height = 6)
 pheatmap(vst_mat_scaled,
          annotation_col = annotation_col,
          show_rownames = FALSE,
@@ -80,7 +83,7 @@ pheatmap(vst_mat_scaled,
          clustering_distance_cols = "correlation",
          clustering_method = "ward.D2",
          main = "")
-
+dev.off()
 
 ### Vulcano plot
 # Volcano plot variables (from the DESeq analysis)
@@ -94,7 +97,7 @@ pval <- pval[valid_idx]
 # Seuils
 seuil <- 0.1           # adjusted p-value threshold
 logfc_cutoff <- 1      # log2 fold change threshold
-
+pdf("volcano_plot.pdf", width = 6, height = 6)
 plot(log_fc, -log10(pval),
      pch = 16,
      xlab = "log2 Fold Change",
@@ -109,7 +112,7 @@ sig_idx <- which(pval < seuil & abs(log_fc) > logfc_cutoff)
 points(log_fc[sig_idx], -log10(pval[sig_idx]), pch = 16)
 # Optional grid
 grid()
-
+dev.off()
 ############################################################################
 ### Différence entre les données de l'article et les données reproduites ###
 ############################################################################
@@ -207,7 +210,8 @@ p_values <- df_long %>%
 
 
 ### Regression (plot)
-ggplot(df_long, aes(x = Article, y = Reproduced, color = Condition)) +
+pdf("regression_article_vs_reproduced.pdf", width = 7, height = 5)
+print(ggplot(df_long, aes(x = Article, y = Reproduced, color = Condition)) +
   geom_point(size = 2, alpha = 0.6) +
   geom_smooth(method = "lm", se = FALSE) +
   geom_abline(slope = 1, intercept = 0, color = "darkgreen", linetype = "dashed") +
@@ -231,8 +235,8 @@ ggplot(df_long, aes(x = Article, y = Reproduced, color = Condition)) +
     y = "Reproduced Data"
   ) +
   theme_minimal()
-
-
+)
+dev.off()
 ### graph Bland-Altman MA (Reproductibilité)
 
 ### Analyse Bland-Altman
@@ -286,6 +290,8 @@ genes_significatifs_BA <- df_ba[df_ba$outlier_BA, ]
 
 ##Graphique Bland-Altman
 df_ba$Gene <- rownames(DEGs_merged)
+pdf("bland_altman_plot.pdf", width = 7, height = 5)
+print(
 ggplot(df_ba, aes(x = Mean, y = Diff)) +
   geom_point(aes(color = outlier_BA), alpha = 0.6) +
   scale_color_manual(values = c("grey60", "red")) +
@@ -304,7 +310,8 @@ ggplot(df_ba, aes(x = Mean, y = Diff)) +
     y = "Différence (Reproduction − Article)",
     color = "Significativité"
   )
-
+)
+dev.off()
 
 
 ### ACP et HCPC
@@ -322,7 +329,9 @@ dta = data.frame(t(x))
 res.PCA<-PCA(dta,graph=FALSE)
 res.HCPC <- HCPC(res.PCA, graph=FALSE)
 #plot.HCPC(res.HCPC,choice='tree',title='Arbre hiérarchique')
+pdf("HCPC_article_map.pdf", width = 6, height = 6)
 plot.HCPC(res.HCPC,choice='map',draw.tree=FALSE,title='')
+dev.off()
 #plot.HCPC(res.HCPC,choice='3D.map',ind.names=FALSE,centers.plot=FALSE,angle=60,title='Arbre hiérarchique sur le plan factoriel')
 
 
@@ -339,7 +348,9 @@ dta_2 = data.frame(t(x_2))
 res.PCA_2<-PCA(dta_2,graph=FALSE)
 res.HCPC_2 <- HCPC(res.PCA_2, graph=FALSE)
 #plot.HCPC(res.HCPC_2,choice='tree',title='Arbre hiérarchique')
+pdf("HCPC_reproduced_map.pdf", width = 6, height = 6)
 plot.HCPC(res.HCPC_2,choice='map',draw.tree=FALSE,title='')
+dev.off()
 #plot.HCPC(res.HCPC_2,choice='3D.map',ind.names=FALSE,centers.plot=FALSE,angle=60,title='Arbre hiérarchique sur le plan factoriel')
 # Distribution in clusters
 clusters_2 = res.HCPC_2$data.clust$clust
@@ -362,7 +373,7 @@ positive_associations_3_2 = rownames(desc_cluster3_2)[desc_cluster3_2[,1]>0]
 ####      MA-plot of all the RNASeq genes              #####
 ############################################################
 # Set pdf document for output
-pdf(file = "/bin/MA_plot.pdf", width = 5, height = 5) 
+pdf(file = "MA_plot.pdf", width = 5, height = 5) 
 
 # Set colors for plot
 col_black <- rgb(0, 0, 0, alpha = 0.3)     # transparent black for general points
