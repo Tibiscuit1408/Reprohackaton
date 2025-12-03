@@ -1,35 +1,31 @@
-### Load required libraries
-
-#Stat analysis (plots // article)
 library(DESeq2)
 library(pheatmap)
 library(RColorBrewer)
-
-#Further analysis (for the report)
 library(ggplot2)
 library(reshape2)
 library(dplyr)
+library(tidyverse)
+library(Factoshiny)
+library(ggrepel)
 
-############################
-### Statistical Analysis ###
-############################
+
+#######################################################
+### Analyse Statistique sur les données Reproduites ###
+#######################################################
 
 
-### Import raw counts (reproduced data)
-counts <- read.table("all_samples_gene_counts.txt",header = TRUE,sep = "\t",comment.char = "#")
+### Importer les donénes reproduites
+counts <- read.table("count_gene.txt",header = TRUE,sep = "\t",comment.char = "#")
 
-#Rename the columns of the data
-colnames(counts)[colnames(counts) == "SRR10379726_1_trimmed_mapped.sam"] <- "Ctrl3"
-colnames(counts)[colnames(counts) == "SRR10379723_1_trimmed_mapped.sam"] <- "IP3"
-colnames(counts)[colnames(counts) == "SRR10379722_1_trimmed_mapped.sam"] <- "IP2"
-colnames(counts)[colnames(counts) == "SRR10379724_1_trimmed_mapped.sam"] <- "Ctrl1"
-colnames(counts)[colnames(counts) == "SRR10379725_1_trimmed_mapped.sam"] <- "Ctrl2"
-colnames(counts)[colnames(counts) == "SRR10379721_1_trimmed_mapped.sam"] <- "IP1"
+### Pré-traitements
+#Renommer les colonnes
+colnames(counts)[colnames(counts) == "SRR10379726_1_trimmed_mapped.bam"] <- "Ctrl3"
+colnames(counts)[colnames(counts) == "SRR10379723_1_trimmed_mapped.bam"] <- "IP3"
+colnames(counts)[colnames(counts) == "SRR10379722_1_trimmed_mapped.bam"] <- "IP2"
+colnames(counts)[colnames(counts) == "SRR10379724_1_trimmed_mapped.bam"] <- "Ctrl1"
+colnames(counts)[colnames(counts) == "SRR10379725_1_trimmed_mapped.bam"] <- "Ctrl2"
+colnames(counts)[colnames(counts) == "SRR10379721_1_trimmed_mapped.bam"] <- "IP1"
 
-#remove "gene-" of the gene_id so that it matches original data
-counts$Geneid <- sub("^gene-", "", counts$Geneid)
-
-#Set gene_id as the name of the rows
 rownames(counts) <- counts[,1]
 
 counts <- counts[,-1]
@@ -37,42 +33,37 @@ counts <- counts[,-1]
 # Remove possible non-numeric columns
 counts <- counts[, sapply(counts, is.numeric)]
 
-counts_filtered <- counts[apply(counts, 1, var, na.rm=TRUE) != 0, ]
-counts_filtered <- na.omit(counts_filtered)
+counts_filtered <- na.omit(counts)
 
 
 
 # Sélection des 6 dernières colonnes
-sample_data <- counts[,c(4:ncol(counts_filtered))]
+reproduced <- counts_filtered[,c(4:ncol(counts_filtered))]
 
 ### Define conditions automatically
 colData <- data.frame(
-  condition = ifelse(grepl("^Ctrl", colnames(sample_data)), "control", "persister"),
-  row.names = colnames(sample_data)
+  condition = ifelse(grepl("^Ctrl", colnames(reproduced)), "control", "persister"),
+  row.names = colnames(reproduced)
 )
 
+
 ### Create DESeq2 dataset and run DE analysis
-dds <- DESeqDataSetFromMatrix(countData = sample_data,
+dds <- DESeqDataSetFromMatrix(countData = reproduced,
                               colData = colData,
                               design = ~ condition)
 
+### Piepline DESeq2
 dds <- DESeq(dds)
-
-### Apply variance stabilizing transformation
 vsd <- vst(dds, blind = FALSE)
 
-### Extraction of top DEGs
+## Extraction des gènes différentiellement exprimés
 res <- results(dds)
 resOrdered <- res[order(res$padj), ]
 DEGs <- subset(resOrdered, padj < 0.1 & abs(log2FoldChange) > 1)
-
-# Keep only genes in the VST data
 vst_mat <- assay(vsd)[rownames(vsd) %in% rownames(DEGs), ]
-
-### Center and scale per gene (optional but recommended)
 vst_mat_scaled <- t(scale(t(vst_mat)))
 
-### Plot the heatmap ###
+### Heatmap
 annotation_col <- data.frame(Condition = factor(colData$condition)) #aggregation of the controls and persisters (names of the )
 rownames(annotation_col) <- rownames(colData)
 my_colors <- colorRampPalette(c("deepskyblue4", "azure", "darkorange2"))(255)
@@ -86,125 +77,135 @@ pheatmap(vst_mat_scaled,
          clustering_distance_rows = "correlation",
          clustering_distance_cols = "correlation",
          clustering_method = "ward.D2",
-         main = "Heatmap")
+         main = "")
 
 
-### Vulcano plot ###
+### Vulcano plot
 # Volcano plot variables (from the DESeq analysis)
 log_fc <- res$log2FoldChange       # log fold change
 pval <- res$padj                   # adjusted p-value
 
-# Optionally, remove NAs
 valid_idx <- !is.na(log_fc) & !is.na(pval)
 log_fc <- log_fc[valid_idx]
 pval <- pval[valid_idx]
 
-# Significance thresholds
+# Seuils
 seuil <- 0.1           # adjusted p-value threshold
 logfc_cutoff <- 1      # log2 fold change threshold
 
-# Basic volcano plot
 plot(log_fc, -log10(pval),
      pch = 16,
      xlab = "log2 Fold Change",
      ylab = "-log10 Adjusted p-value",
-     main = "Volcano Plot",
+     main = "",
      col = "lightgray")
 
-# Add effect annotation
 mtext("Effect: condition")
-
-# Add significance lines
 abline(h = -log10(seuil), v = c(-logfc_cutoff, logfc_cutoff),
        lwd = 2, col = "orange")
-
-# Highlight significant DEGs
 sig_idx <- which(pval < seuil & abs(log_fc) > logfc_cutoff)
 points(log_fc[sig_idx], -log10(pval[sig_idx]), pch = 16)
 # Optional grid
 grid()
 
-############################################################
-### Difference between original data and reproduced data ###
-############################################################
+############################################################################
+### Différence entre les données de l'article et les données reproduites ###
+############################################################################
 
 original <- read.table("GSE139659.tsv", sep='\t', header=TRUE)
-## Rows and columns reorganisation
 
-#set gene_id as name of the rows
+#Nommer les lignes selon le nom des gènes
 rownames(original) <- original[,2]
 
-# Remove possible non-numeric columns
+# Convertir les données en valeurs numériques
 original <- original[, sapply(original, is.numeric)]
+# retirer toutes les lignes contenant des valeurs manquantes (30 lignes supprimées)
+original_filtered <- na.omit(original)
 
-original_filtered <- original[apply(original, 1, var, na.rm=TRUE) != 0, ]
-original_filtered <- na.omit(original_filtered)
 
-#plot heatmap
+#Selectionner les colonnes d'intérêt
+article <- original_filtered[,c(2:7)]
 
-#select columns of interest
-data <- original_filtered[,c(2:7)]
+#Nommer les lignes selon nom des gènes
+article <- article[order(rownames(article)), ]
 
-#reorganisation of rows based on ASC geneid
-data <- data[order(rownames(data)), ]
+#Renommer les colonnes
+colnames(article)[colnames(article) == "ctrl4"] <- "Ctrl1"
+colnames(article)[colnames(article) == "ctrl5"] <- "Ctrl2"
+colnames(article)[colnames(article) == "ctrl6"] <- "Ctrl3"
 
-#rename the columns
-colnames(data)[colnames(data) == "ctrl4"] <- "Ctrl1"
-colnames(data)[colnames(data) == "ctrl5"] <- "Ctrl2"
-colnames(data)[colnames(data) == "ctrl6"] <- "Ctrl3"
 
-#difference of length
-#difference of genes selected and not selected
+#Analyse des gènes dans les données Articles et Reproduced
 
-#plot of the regression -> amongst genes that are common in both datasets
-## Global overview
-df_merged <- merge(data, sample_data, by = "row.names")
+variables_analysis <- data.frame(
+  Variable = union(rownames(article), rownames(reproduced)),
+  In_Article = union(rownames(article), rownames(reproduced)) %in% rownames(article),
+  In_Reproduced = union(rownames(article), rownames(reproduced)) %in% rownames(reproduced)
+)
+#Liste des gènes uniquement présents dans les données de l'article
 
-# Identify columns by suffix
+genes_only_in_article <- variables_analysis %>%
+  filter(In_Article == TRUE & In_Reproduced == FALSE) %>%
+  pull(Variable)
+
+#Listes des gènes uniquement présents dans les données reproduites
+genes_only_in_reproduced <- variables_analysis %>%
+  filter(In_Article == FALSE & In_Reproduced == TRUE) %>%
+  pull(Variable)
+
+#Regression (corrélation entre les deux datasets : Article et Reproduced)
+df_merged <- merge(article, reproduced, by = "row.names")
+
+#Nommer les lignes selon les gènes
+rownames(df_merged) <- df_merged$Row.names
+df_merged$Row.names <- NULL
+
 original_cols <- grep("\\.x$", names(df_merged), value = TRUE)
 reproduced_cols <- gsub("\\.x$", ".y", original_cols)  # replace .x with .y to find matching names
 
-#Combining columns original/repruced based on accurate column name
 df_long <- do.call(rbind, lapply(seq_along(original_cols), function(i) {
   data.frame(
+    Gene = rownames(df_merged),                    
     Condition = gsub("\\.x$", "", original_cols[i]),
-    Original = df_merged[[original_cols[i]]],
-    Reproduced = df_merged[[reproduced_cols[i]]]
+    Article = df_merged[[original_cols[i]]],
+    Reproduced = df_merged[[reproduced_cols[i]]],
+    stringsAsFactors = FALSE
   )
 }))
 
-#Calculating the global MSE
-df_long$SquaredError <- (df_long$Original - df_long$Reproduced)^2
+
+#Calcul de la MSE globale et RMSE
+df_long$SquaredError <- (df_long$Article - df_long$Reproduced)^2
 MSE <- mean(df_long$SquaredError, na.rm = TRUE)
 RMSE <- sqrt(MSE)
 
-###normalised RMSE
-nRMSE <- RMSE / mean(df_long$Original, na.rm = TRUE)
+###Noramlisation de la RMSE
+nRMSE <- RMSE / mean(df_long$Article, na.rm = TRUE)
 #nRMSE
 
 nRMSE_per_condition <- df_long %>%
   group_by(Condition) %>%
   summarise(
-    MSE = mean((Original - Reproduced)^2, na.rm = TRUE),
+    MSE = mean((Article - Reproduced)^2, na.rm = TRUE),
     RMSE = sqrt(MSE),
-    Mean_Original = mean(Original, na.rm = TRUE),
-    nRMSE = RMSE / Mean_Original
+    Mean_Article = mean(Article, na.rm = TRUE),
+    nRMSE = RMSE / Mean_Article
   )
 
 #nRMSE_per_condition
 
-### Statistics (how statistically different each pair is from each other)
+### Calcul des p_values
 p_values <- df_long %>%
   group_by(Condition) %>%
   summarise(
-    p_value = t.test(Original, Reproduced, paired = TRUE)$p.value
+    p_value = t.test(Article, Reproduced, paired = TRUE)$p.value
   )
 
 #p_values
 
 
 ### Regression (plot)
-ggplot(df_long, aes(x = Original, y = Reproduced, color = Condition)) +
+ggplot(df_long, aes(x = Article, y = Reproduced, color = Condition)) +
   geom_point(size = 2, alpha = 0.6) +
   geom_smooth(method = "lm", se = FALSE) +
   geom_abline(slope = 1, intercept = 0, color = "darkgreen", linetype = "dashed") +
@@ -224,9 +225,133 @@ ggplot(df_long, aes(x = Original, y = Reproduced, color = Condition)) +
   ) +
   facet_wrap(~ Condition) +
   labs(
-    title = "Regression Between Original and Reproduced Data",
-    subtitle = "Green = perfect reproducibility (y = x)",
-    x = "Original Data",
+    x = "Article Data",
     y = "Reproduced Data"
   ) +
   theme_minimal()
+
+
+### graph Bland-Altman MA (Reproductibilité)
+
+### Analyse Bland-Altman
+## Préparation des données
+#Récupération des log2FoldChange des données publiées et reproduites
+prep_Degs_article <- original_filtered[,c("log2FoldChange","padj")]
+prep_DEGs_article_2 <- subset(prep_Degs_article,padj < 0.1 & abs(log2FoldChange) > 1)
+DEGs_article <- data.frame(Gene= rownames(prep_DEGs_article_2), log2FoldChange = prep_DEGs_article_2$log2FoldChange)
+#Retirer la colonne Gene et la convertir en rownames
+rownames(DEGs_article) <- DEGs_article$Gene
+DEGs_article$Gene <- NULL
+DEGs_reproduced <- as.data.frame(DEGs)["log2FoldChange"] #conversion d'un objet  “DESeqResults” en data frame
+#length(rownames(original_filtered))
+#1988
+#length(rownames(prep_DEGs_article_2))
+#827
+#length(rownames(DEGs_article))
+#827
+#length(rownames(DEGs_reproduced))
+#1174
+
+DEGs_merged <- merge(DEGs_article, DEGs_reproduced, by = "row.names")
+rownames(DEGs_merged) <- DEGs_merged$Row.names
+DEGs_merged$Row.names <- NULL
+degs_article_cols <- grep("\\.x$", names(DEGs_merged), value = TRUE)
+degs_reproduced_cols <- gsub("\\.x$", ".y",degs_article_cols)
+
+df_long_2 <- do.call(rbind, lapply(seq_along(degs_article_cols), function(i) {
+  data.frame(
+    Gene = rownames(DEGs_merged),
+    Condition = gsub("\\.x$", "", degs_article_cols[i]),
+    Article = DEGs_merged[[degs_article_cols[i]]],
+    Reproduced = DEGs_merged[[degs_reproduced_cols[i]]],
+    stringsAsFactors = FALSE
+  )
+}))
+
+
+df_ba <- data.frame(
+  Mean = (df_long_2$Article + df_long_2$Reproduced) / 2,
+  Diff = df_long_2$Reproduced - df_long_2$Article,
+  Condition = df_long_2$Condition
+)
+## Calcul des différences entre les logfold2change des données de l'Article et Reproduites
+mean_diff <- mean(df_ba$Diff, na.rm = TRUE)
+sd_diff   <- sd(df_ba$Diff, na.rm = TRUE)
+LI <- mean_diff - 1.96 * sd_diff
+LS <- mean_diff + 1.96 * sd_diff
+df_ba$outlier_BA <- df_ba$Diff < LI | df_ba$Diff > LS
+genes_significatifs_BA <- df_ba[df_ba$outlier_BA, ]
+
+##Graphique Bland-Altman
+df_ba$Gene <- rownames(DEGs_merged)
+ggplot(df_ba, aes(x = Mean, y = Diff)) +
+  geom_point(aes(color = outlier_BA), alpha = 0.6) +
+  scale_color_manual(values = c("grey60", "red")) +
+  geom_text_repel(
+    data = df_ba[df_ba$outlier_BA == TRUE, ],
+    aes(label = Gene),
+    size = 3
+  ) +
+  geom_hline(yintercept = 0, color = "darkgreen", linetype = "dashed") +
+  geom_hline(yintercept = mean(df_ba$Diff), color = "red")+
+  geom_hline(yintercept = LI, color = "blue", linetype = "dotted") +
+  geom_hline(yintercept = LS, color = "blue", linetype = "dotted") +
+  theme_minimal()+
+  labs(
+    x = "Expression moyenne (Article + Reproduction)/2",
+    y = "Différence (Reproduction − Article)",
+    color = "Significativité"
+  )
+
+
+
+### ACP et HCPC
+
+select1 <- ((original_filtered$padj < 0.1) & (abs(original_filtered$log2FoldChange)>=1))
+class(select1)
+sum(select1)
+
+genePositive_article = original_filtered[select1,]
+genePositive_article <- original_filtered[,c(2:7)]
+
+## Données de l'Article
+x = as.matrix(genePositive_article)
+dta = data.frame(t(x))
+res.PCA<-PCA(dta,graph=FALSE)
+res.HCPC <- HCPC(res.PCA, graph=FALSE)
+#plot.HCPC(res.HCPC,choice='tree',title='Arbre hiérarchique')
+plot.HCPC(res.HCPC,choice='map',draw.tree=FALSE,title='')
+#plot.HCPC(res.HCPC,choice='3D.map',ind.names=FALSE,centers.plot=FALSE,angle=60,title='Arbre hiérarchique sur le plan factoriel')
+
+
+desc_cluster2 = res.HCPC$desc.var$quanti[[2]]
+desc_cluster3 = res.HCPC$desc.var$quanti[[3]]
+
+## Données reproduites
+genePositive_reproduced = counts_filtered[select1,]
+#head(genePositive_reproduced)
+genePositive_reproduced <- counts_filtered[,c(4:9)]
+
+x_2 = as.matrix(genePositive_reproduced)
+dta_2 = data.frame(t(x_2))
+res.PCA_2<-PCA(dta_2,graph=FALSE)
+res.HCPC_2 <- HCPC(res.PCA_2, graph=FALSE)
+#plot.HCPC(res.HCPC_2,choice='tree',title='Arbre hiérarchique')
+plot.HCPC(res.HCPC_2,choice='map',draw.tree=FALSE,title='')
+#plot.HCPC(res.HCPC_2,choice='3D.map',ind.names=FALSE,centers.plot=FALSE,angle=60,title='Arbre hiérarchique sur le plan factoriel')
+# Distribution in clusters
+clusters_2 = res.HCPC_2$data.clust$clust
+#length(dta$c.phenotype.lignee.)
+#length(clusters)
+
+# Association gènes clusters  (focus on cluster 2 : Perissters)
+desc_cluster2_2 = res.HCPC_2$desc.var$quanti[[2]]
+#head(desc_cluster2_2)
+negative_associations_2_2 = rownames(desc_cluster2_2)[desc_cluster2_2[,1]<0]
+positive_associations_2_2 = rownames(desc_cluster2_2)[desc_cluster2_2[,1]>0]
+
+# Association gènes clusters (focus on cluster 3 : Contrôles)
+desc_cluster3_2 = res.HCPC_2$desc.var$quanti[[3]]
+#head(desc_cluster3_2)
+negative_associations_3_2 = rownames(desc_cluster3_2)[desc_cluster3_2[,1]<0]
+positive_associations_3_2 = rownames(desc_cluster3_2)[desc_cluster3_2[,1]>0]

@@ -117,6 +117,22 @@ process Count {
     featureCounts -a ${gtf} -o all_samples_gene_counts.txt -g gene_id -t gene -s 1 ${bams.join(' ')}
     """
 }
+//7. Statistic with R 
+process Rstat {
+
+    publishDir path: "${params.outdir}/stats", mode: 'copy'
+
+    input:
+    path counts_file
+
+    output:
+    path *.pdf
+
+    script:
+    """
+    Graphs_mercredi.R ${counts_file}
+    """
+}
 
 
 
@@ -135,7 +151,8 @@ workflow {
 
     bam_ch = Mapping_replicate(trimmed_ch, index_ch)
     bam_list_ch = bam_ch.collect()
-    Count(bam_list_ch, gtf_ch)
+    count_file = Count(bam_list_ch, gtf_ch)
+    Rstat(counts_file)
 }
 
 
