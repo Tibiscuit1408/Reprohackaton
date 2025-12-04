@@ -18,7 +18,9 @@ library(KEGGREST)
 
 
 ### Importer les donénes reproduites
-counts <- read.table("count_gene.txt",header = TRUE,sep = "\t",comment.char = "#")
+counts_file <- args[1]
+
+counts <- read.table(counts_file, header = TRUE, sep = "\t", comment.char = "#")
 
 ### Pré-traitements
 #Renommer les colonnes
