@@ -4,13 +4,12 @@ library(RColorBrewer)
 library(ggplot2)
 library(reshape2)
 library(dplyr)
-library(tidyverse)
-library(Factoshiny)
 library(ggrepel)
+library(readxl)
 
 
 #######################################################
-### Analyse Statistique sur les données Reproduites ###
+### Analyse Statistique des données Reproduites ###
 #######################################################
 
 
@@ -64,7 +63,7 @@ vst_mat <- assay(vsd)[rownames(vsd) %in% rownames(DEGs), ]
 vst_mat_scaled <- t(scale(t(vst_mat)))
 
 ### Heatmap
-annotation_col <- data.frame(Condition = factor(colData$condition)) #aggregation of the controls and persisters (names of the )
+annotation_col <- data.frame(Condition = factor(colData$condition))
 rownames(annotation_col) <- rownames(colData)
 my_colors <- colorRampPalette(c("deepskyblue4", "azure", "darkorange2"))(255)
 ann_colors <- list(Condition = c(control = "black", persister = "grey"))
@@ -81,51 +80,46 @@ pheatmap(vst_mat_scaled,
 
 
 ### Vulcano plot
-# Volcano plot variables (from the DESeq analysis)
-log_fc <- res$log2FoldChange       # log fold change
-pval <- res$padj                   # adjusted p-value
 
-valid_idx <- !is.na(log_fc) & !is.na(pval)
-log_fc <- log_fc[valid_idx]
-pval <- pval[valid_idx]
+#Création d'un data frame supplémentaire ayant 1 colonne caractérisant l'état de régularisation des gènes
+res_2 <- res
+res_2$diffexpressed <- "NO"
+  # if log2Foldchange > 1 and pvalue < 0.1, set as "UP"
+  res_2$diffexpressed[res_2$log2FoldChange > 1 & res_2$padj < 0.1] <- "UP"
+  # if log2Foldchange < -1 and pvalue < 0.1, set as "DOWN"
+  res_2$diffexpressed[res_2$log2FoldChange < -1 & res_2$padj < 0.1] <- "DOWN"
+  head(res_2[order(res_2$padj) & res_2$diffexpressed == 'DOWN', ])
 
-# Seuils
-seuil <- 0.1           # adjusted p-value threshold
-logfc_cutoff <- 1      # log2 fold change threshold
+res_2$gene_symbol <- rownames(res_2)
+# Création d'une colonne "delabel" qui contiendra le nom des 15 gènes les plus différentiellement exprimés (NA sinon)
+res_2$delabel <- ifelse(res_2$gene_symbol %in% head(res_2[order(res_2$padj), "gene_symbol"], 15), res_2$gene_symbol, NA)
 
-plot(log_fc, -log10(pval),
-     pch = 16,
-     xlab = "log2 Fold Change",
-     ylab = "-log10 Adjusted p-value",
-     main = "",
-     col = "lightgray")
+#récupérer DEGs 
+reg_repro <- data.frame(gene_symbol = res_2[!is.na(res_2$delabel), ]$gene_symbol,diffexpressed= res_2[!is.na(res_2$delabel), ]$diffexpressed)
 
-mtext("Effect: condition")
-abline(h = -log10(seuil), v = c(-logfc_cutoff, logfc_cutoff),
-       lwd = 2, col = "orange")
-sig_idx <- which(pval < seuil & abs(log_fc) > logfc_cutoff)
-points(log_fc[sig_idx], -log10(pval[sig_idx]), pch = 16)
-# Optional grid
-grid()
+ggplot(data = res_2, aes(x = log2FoldChange, y = -log10(padj), col = diffexpressed, label = delabel)) +
+  geom_vline(xintercept = c(-1, 1), col = "white", linetype = 'dashed') +
+  geom_hline(yintercept = -log10(0.1), col = "white", linetype = 'dashed') + 
+  geom_point(size = 2) + 
+  scale_color_manual(values = c("#00AFBB", "grey", "#bb0c00"),  
+                     labels = c("Sous-exprimé", "Non significatif", "Sur-exprimé")) + 
+  coord_cartesian(ylim = c(0, 100), xlim = c(-10, 10)) + 
+  labs(color = 'Niveau de régulation',  
+       x = expression("log"[2]*"FC"), y = expression("-log"[10]*"p-value")) + 
+  scale_x_continuous(breaks = seq(-10, 10, 2)) + 
+  geom_text_repel(max.overlaps = Inf) 
 
 ############################################################################
 ### Différence entre les données de l'article et les données reproduites ###
 ############################################################################
 
-original <- read.table("GSE139659.tsv", sep='\t', header=TRUE)
+original <- read.csv("GSE139659_IPvsctrl.csv",sep=";", header=TRUE)
 
 #Nommer les lignes selon le nom des gènes
 rownames(original) <- original[,2]
 
-# Convertir les données en valeurs numériques
-original <- original[, sapply(original, is.numeric)]
-# retirer toutes les lignes contenant des valeurs manquantes (30 lignes supprimées)
-original_filtered <- na.omit(original)
-
-
 #Selectionner les colonnes d'intérêt
-article <- original_filtered[,c(2:7)]
-
+article <- original[,c(6:11)]
 #Nommer les lignes selon nom des gènes
 article <- article[order(rownames(article)), ]
 
@@ -155,6 +149,11 @@ genes_only_in_reproduced <- variables_analysis %>%
 
 #Regression (corrélation entre les deux datasets : Article et Reproduced)
 df_merged <- merge(article, reproduced, by = "row.names")
+
+# retirer toutes les lignes contenant des valeurs manquantes
+df_merged <- na.omit(df_merged)
+
+
 
 #Nommer les lignes selon les gènes
 rownames(df_merged) <- df_merged$Row.names
@@ -195,12 +194,12 @@ nRMSE_per_condition <- df_long %>%
 #nRMSE_per_condition
 
 ### Calcul des p_values
+
 p_values <- df_long %>%
   group_by(Condition) %>%
   summarise(
-    p_value = t.test(Article, Reproduced, paired = TRUE)$p.value
+    p_value = wilcox.test(Article, Reproduced, paired = TRUE)$p.value
   )
-
 #p_values
 
 
@@ -209,24 +208,10 @@ ggplot(df_long, aes(x = Article, y = Reproduced, color = Condition)) +
   geom_point(size = 2, alpha = 0.6) +
   geom_smooth(method = "lm", se = FALSE) +
   geom_abline(slope = 1, intercept = 0, color = "darkgreen", linetype = "dashed") +
-  geom_text(
-    data = nRMSE_per_condition,
-    aes(x = Inf, y = Inf, label = paste("nRMSE =", round(nRMSE*100, 3),"%")),
-    inherit.aes = FALSE,
-    hjust = 2, vjust = 1.1,
-    size = 3
-  ) +
-  geom_text(
-    data = p_values,
-    aes(x = Inf, y = Inf, label = paste("pvalue =",round(p_value,3))),
-    inherit.aes = FALSE,
-    hjust = 2.5, vjust = 3,
-    size = 3
-  ) +
   facet_wrap(~ Condition) +
   labs(
-    x = "Article Data",
-    y = "Reproduced Data"
+    x = "Article",
+    y = "Reproduction"
   ) +
   theme_minimal()
 
@@ -236,7 +221,7 @@ ggplot(df_long, aes(x = Article, y = Reproduced, color = Condition)) +
 ### Analyse Bland-Altman
 ## Préparation des données
 #Récupération des log2FoldChange des données publiées et reproduites
-prep_Degs_article <- original_filtered[,c("log2FoldChange","padj")]
+prep_Degs_article <- original[,c("log2FoldChange","padj")]
 prep_DEGs_article_2 <- subset(prep_Degs_article,padj < 0.1 & abs(log2FoldChange) > 1)
 DEGs_article <- data.frame(Gene= rownames(prep_DEGs_article_2), log2FoldChange = prep_DEGs_article_2$log2FoldChange)
 #Retirer la colonne Gene et la convertir en rownames
@@ -244,19 +229,34 @@ rownames(DEGs_article) <- DEGs_article$Gene
 DEGs_article$Gene <- NULL
 DEGs_reproduced <- as.data.frame(DEGs)["log2FoldChange"] #conversion d'un objet  “DESeqResults” en data frame
 #length(rownames(original_filtered))
-#1988
 #length(rownames(prep_DEGs_article_2))
-#827
 #length(rownames(DEGs_article))
-#827
 #length(rownames(DEGs_reproduced))
-#1174
 
 DEGs_merged <- merge(DEGs_article, DEGs_reproduced, by = "row.names")
 rownames(DEGs_merged) <- DEGs_merged$Row.names
 DEGs_merged$Row.names <- NULL
 degs_article_cols <- grep("\\.x$", names(DEGs_merged), value = TRUE)
 degs_reproduced_cols <- gsub("\\.x$", ".y",degs_article_cols)
+
+
+#Analyse des gènes dans les données Articles et Reproduced
+
+DEGs_analysis <- data.frame(
+  Variable = union(rownames(DEGs_article ), rownames(DEGs_reproduced)),
+  In_Article = union(rownames(DEGs_article ), rownames(DEGs_reproduced)) %in% rownames(DEGs_article),
+  In_Reproduced = union(rownames(DEGs_article ), rownames(DEGs_reproduced)) %in% rownames(DEGs_reproduced)
+)
+#Liste des gènes uniquement présents dans les données de l'article
+
+DEGs_only_in_article <- DEGs_analysis %>%
+  filter(In_Article == TRUE & In_Reproduced == FALSE) %>%
+  pull(Variable)
+
+#Listes des gènes uniquement présents dans les données reproduites
+DEGs_only_in_reproduced <- DEGs_analysis %>%
+  filter(In_Article == FALSE & In_Reproduced == TRUE) %>%
+  pull(Variable)
 
 df_long_2 <- do.call(rbind, lapply(seq_along(degs_article_cols), function(i) {
   data.frame(
@@ -268,6 +268,11 @@ df_long_2 <- do.call(rbind, lapply(seq_along(degs_article_cols), function(i) {
   )
 }))
 
+df_ba_2 <- data.frame(
+  Mean = (df_long_2$Article + df_long_2$Reproduced) / 2,
+  Diff = df_long_2$Reproduced - df_long_2$Article,
+  Condition = df_long_2$Condition
+)
 
 df_ba <- data.frame(
   Mean = (df_long_2$Article + df_long_2$Reproduced) / 2,
@@ -304,54 +309,24 @@ ggplot(df_ba, aes(x = Mean, y = Diff)) +
   )
 
 
-
-### ACP et HCPC
-
-select1 <- ((original_filtered$padj < 0.1) & (abs(original_filtered$log2FoldChange)>=1))
-class(select1)
-sum(select1)
-
-genePositive_article = original_filtered[select1,]
-genePositive_article <- original_filtered[,c(2:7)]
-
-## Données de l'Article
-x = as.matrix(genePositive_article)
-dta = data.frame(t(x))
-res.PCA<-PCA(dta,graph=FALSE)
-res.HCPC <- HCPC(res.PCA, graph=FALSE)
-#plot.HCPC(res.HCPC,choice='tree',title='Arbre hiérarchique')
-plot.HCPC(res.HCPC,choice='map',draw.tree=FALSE,title='')
-#plot.HCPC(res.HCPC,choice='3D.map',ind.names=FALSE,centers.plot=FALSE,angle=60,title='Arbre hiérarchique sur le plan factoriel')
+################################################
+### Analyse Statistique des données Publiées ###
+################################################
 
 
-desc_cluster2 = res.HCPC$desc.var$quanti[[2]]
-desc_cluster3 = res.HCPC$desc.var$quanti[[3]]
+#Création d'un data frame supplémentaire ayant 1 colonne caractérisant l'état de régularisation des gènes
+res_3 <- data.frame(log2FoldChange = original$log2FoldChange,
+                    padj = original$padj,
+                    gene_symbol = rownames(original))
+res_3$diffexpressed <- "NO"
+# if log2Foldchange > 1 and pvalue < 0.1, set as "UP"
+res_3$diffexpressed[res_3$log2FoldChange > 1 & res_3$padj < 0.1] <- "UP"
+# if log2Foldchange < -1 and pvalue < 0.1, set as "DOWN"
+res_3$diffexpressed[res_3$log2FoldChange < -1 & res_3$padj < 0.1] <- "DOWN"
+head(res_3[order(res_3$padj) & res_3$diffexpressed == 'UP', ])
 
-## Données reproduites
-genePositive_reproduced = counts_filtered[select1,]
-#head(genePositive_reproduced)
-genePositive_reproduced <- counts_filtered[,c(4:9)]
+# Création d'une colonne "delabel" qui contiendra le nom des 15 gènes les plus différentiellement exprimés (NA sinon)
+res_3$delabel <- ifelse(res_3$gene_symbol %in% head(res_3[order(res_3$padj), "gene_symbol"], 15), res_3$gene_symbol, NA)
 
-x_2 = as.matrix(genePositive_reproduced)
-dta_2 = data.frame(t(x_2))
-res.PCA_2<-PCA(dta_2,graph=FALSE)
-res.HCPC_2 <- HCPC(res.PCA_2, graph=FALSE)
-#plot.HCPC(res.HCPC_2,choice='tree',title='Arbre hiérarchique')
-plot.HCPC(res.HCPC_2,choice='map',draw.tree=FALSE,title='')
-#plot.HCPC(res.HCPC_2,choice='3D.map',ind.names=FALSE,centers.plot=FALSE,angle=60,title='Arbre hiérarchique sur le plan factoriel')
-# Distribution in clusters
-clusters_2 = res.HCPC_2$data.clust$clust
-#length(dta$c.phenotype.lignee.)
-#length(clusters)
-
-# Association gènes clusters  (focus on cluster 2 : Perissters)
-desc_cluster2_2 = res.HCPC_2$desc.var$quanti[[2]]
-#head(desc_cluster2_2)
-negative_associations_2_2 = rownames(desc_cluster2_2)[desc_cluster2_2[,1]<0]
-positive_associations_2_2 = rownames(desc_cluster2_2)[desc_cluster2_2[,1]>0]
-
-# Association gènes clusters (focus on cluster 3 : Contrôles)
-desc_cluster3_2 = res.HCPC_2$desc.var$quanti[[3]]
-#head(desc_cluster3_2)
-negative_associations_3_2 = rownames(desc_cluster3_2)[desc_cluster3_2[,1]<0]
-positive_associations_3_2 = rownames(desc_cluster3_2)[desc_cluster3_2[,1]>0]
+#Récupérer les lignes correspondant aux DEGs de l'article avec labels up/down
+reg_article <- data.frame(gene_symbol = res_3[!is.na(res_3$delabel), ]$gene_symbol,diffexpressed= res_3[!is.na(res_3$delabel), ]$diffexpressed)
