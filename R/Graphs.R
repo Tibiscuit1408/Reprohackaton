@@ -5,7 +5,6 @@ library(ggplot2)
 library(reshape2)
 library(dplyr)
 library(ggrepel)
-library(readxl)
 
 
 #######################################################
@@ -330,3 +329,4 @@ res_3$delabel <- ifelse(res_3$gene_symbol %in% head(res_3[order(res_3$padj), "ge
 
 #Récupérer les lignes correspondant aux DEGs de l'article avec labels up/down
 reg_article <- data.frame(gene_symbol = res_3[!is.na(res_3$delabel), ]$gene_symbol,diffexpressed= res_3[!is.na(res_3$delabel), ]$diffexpressed)
+
