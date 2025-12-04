@@ -124,6 +124,7 @@ process Rstat {
 
     input:
     path counts_file
+    path csv_file from 'GSE139659_IPvsctrl.csv'
 
     output:
     path "*.pdf"
@@ -131,7 +132,7 @@ process Rstat {
     script:
     """
     chmod ugo+x Graphs_repro.R
-    Graphs_repro.R ${counts_file}
+    Graphs_repro.R ${counts_file} ${csv_file}
     """
 }
 
@@ -139,7 +140,7 @@ process Rstat {
 
 workflow {
     accession_ch = Channel
-        .fromPath('Nextflow/accessions.txt')
+        .fromPath('accessions.txt')
         .splitText()
         .map { it.trim() }
     reads_ch = fetch_data(accession_ch)
@@ -155,6 +156,7 @@ workflow {
     count_file = Count(bam_list_ch, gtf_ch)
     Rstat(counts_file)
 }
+
 
 
 
