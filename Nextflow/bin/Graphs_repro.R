@@ -17,8 +17,9 @@ library(KEGGREST)
 
 
 ### Importer les donénes reproduites
+args <- commandArgs(trailingOnly = TRUE)
 counts_file <- args[1]
-
+csv_file <- args[2]
 counts <- read.table(counts_file, header = TRUE, sep = "\t", comment.char = "#")
 
 ### Pré-traitements
@@ -120,7 +121,7 @@ dev.off()
 ############################################################################
 ### Différence entre les données de l'article et les données reproduites ###
 ############################################################################
-original <- read.csv("GSE139659_IPvsctrl.csv",sep=";", header=TRUE)
+original <- read.csv(csv_file,sep=";", header=TRUE)
 
 #Nommer les lignes selon le nom des gènes
 rownames(original) <- original[,2]
