@@ -5,7 +5,7 @@ library(KEGGREST)
 ####      MA-plot of all the RNASeq genes              #####
 ############################################################
 # Set pdf document for output
-pdf(file = "/bin/MA_plot.pdf", width = 5, height = 5) 
+pdf(file = "MA_plot.pdf", width = 5, height = 5) 
 
 # Set colors for plot
 col_black <- rgb(0, 0, 0, alpha = 0.3)     # transparent black for general points
@@ -61,7 +61,6 @@ dev.off()
 ############################################################
 
 # 1. Import the genes from kegg https://www.kegg.jp/kegg-bin/get_htext#C180 
-kegg_tr_genes <- read.table("C:/Users/iness/Documents/Post BAC/AgroParisTech/3eme_annee/AMI2B/Reprohackathon/genes_related_to_translation.txt",sep = "\t")
 kegg_path_id <- download_KEGG('sao')
 
 ## Import the translation related genes
@@ -134,7 +133,7 @@ gene_translation <- c(gene_translation_path, gene_translation_ortho)
 ############################################################
 
 # Set pdf document for output
-pdf(file = "/bin/MA_plot_translation.pdf", width = 5, height = 5) 
+pdf(file = "MA_plot_translation.pdf", width = 5, height = 5) 
 
 # Plot non-significant points from translation_genes
 with(res[rownames(res) %in% gene_translation & !sig, ], 
@@ -199,4 +198,5 @@ legend(x = 0, y=-4 ,
 # Output
 abline(h = 0, col = 'black', lty = 4)
 title("MA-plot of genes related to translation")
+
 dev.off()
