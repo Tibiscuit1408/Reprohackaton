@@ -126,11 +126,12 @@ process Rstat {
     path counts_file
 
     output:
-    path *.pdf
+    path "*.pdf"
 
     script:
     """
-    Graphs_mercredi.R ${counts_file}
+    chmod ugo+x Graphs_repro.R
+    Graphs_repro.R ${counts_file}
     """
 }
 
@@ -154,6 +155,7 @@ workflow {
     count_file = Count(bam_list_ch, gtf_ch)
     Rstat(counts_file)
 }
+
 
 
 
