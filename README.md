@@ -28,5 +28,6 @@ docker build -t nf-r-deseq -f Dockerfile.r-deseq .
 ## Etape 1 : Lancement de Nextflow
 Se mettre dans le dossier Nextflow puis,
 ```bash
+chmod ugo+x bin/Graphs_code.R
 nextflow run main.nf -with-docker -c main.config
 ```
