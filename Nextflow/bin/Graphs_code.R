@@ -95,7 +95,7 @@ dev.off()
 
 #Création d'un data frame supplémentaire ayant 1 colonne caractérisant l'état de régularisation des gènes
 pdf("volcano_plot.pdf", width = 6, height = 6)
-res_2 <- res
+res_2 <- as.data.frame(res)
 res_2$diffexpressed <- "NO"
   # if log2Foldchange > 1 and pvalue < 0.1, set as "UP"
   res_2$diffexpressed[res_2$log2FoldChange > 1 & res_2$padj < 0.1] <- "UP"
@@ -239,7 +239,7 @@ DEGs_article <- data.frame(Gene= rownames(prep_DEGs_article_2), log2FoldChange =
 #Retirer la colonne Gene et la convertir en rownames
 rownames(DEGs_article) <- DEGs_article$Gene
 DEGs_article$Gene <- NULL
-#DEGs_reproduced <- as.data.frame(DEGs)["log2FoldChange"] #conversion d'un objet  “DESeqResults” en data frame
+DEGs_reproduced <- as.data.frame(DEGs)["log2FoldChange"] #conversion d'un objet  “DESeqResults” en data frame
 DEGs_reproduced <- DEGs[, "log2FoldChange", drop = FALSE]
 #length(rownames(original_filtered))
 #length(rownames(prep_DEGs_article_2))
