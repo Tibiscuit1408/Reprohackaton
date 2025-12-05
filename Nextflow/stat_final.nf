@@ -17,6 +17,7 @@ process Rstat {
 
     script:
     """
+    chmod  ugo+x bin/Graphs_code.R
     Graphs_code.R ${counts_file} ${csv_or}
     """
 }
@@ -28,3 +29,4 @@ workflow {
 
     Rstat(counts_ch,csv_or)
 }
+
