@@ -124,15 +124,14 @@ process Rstat {
 
     input:
     path counts_file
-    path csv_file from 'GSE139659_IPvsctrl.csv'
+    path csv_file
 
     output:
     path "*.pdf"
 
     script:
     """
-    chmod ugo+x Graphs_repro.R
-    Graphs_repro.R ${counts_file} ${csv_file}
+    Graphs_code.R ${counts_file} ${csv_file}
     """
 }
 
@@ -154,8 +153,10 @@ workflow {
     bam_ch = Mapping_replicate(trimmed_ch, index_ch)
     bam_list_ch = bam_ch.collect()
     count_file = Count(bam_list_ch, gtf_ch)
-    Rstat(counts_file)
+    csv_or = Channel.fromPath("GSE139659_IPvsctrl.csv")
+    Rstat(count_file,csv_or)
 }
+
 
 
 
