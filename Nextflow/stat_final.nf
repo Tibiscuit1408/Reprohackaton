@@ -10,19 +10,21 @@ process Rstat {
 
     input:
     path counts_file
+    path csv_or
 
     output:
     path "*.pdf"
 
     script:
     """
-    Graphs_mercredi.R ${counts_file}
+    Graphs_code.R ${counts_file} ${csv_or}
     """
 }
 
 workflow {
 
     counts_ch = Channel.fromPath("count_gene.txt")
+    csv_or = Channel.fromPath("GSE139659_IPvsctrl.csv")
 
-    Rstat(counts_ch)
+    Rstat(counts_ch,csv_or)
 }
