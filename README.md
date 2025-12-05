@@ -31,4 +31,4 @@ Se mettre dans le dossier Nextflow puis,
 chmod ugo+x bin/Graphs_code.R
 nextflow run main.nf -with-docker -c main.config
 ```
-Les figures sont enregistrées dans le sous-dossier Stats
+Les figures sont enregistrées dans le sous-dossier Stats du dossier Results (créé lors du process).
